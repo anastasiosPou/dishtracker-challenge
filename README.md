@@ -28,6 +28,10 @@ and live API: https://recognitionstaging.dishtracker.io/docs#/ProductSync
 Note that `labels` which identify Dishtracker products and categories, need to follow
 strict regexes and a product needs a category as prefix in the label.
 
+Feel free to use your own style! If to narrow down the choices,
+lean on our [Brand Design presentation](https://drive.google.com/file/d/1h-8dL-mlHHKDURnxeJO1CFpOQg9-qbIl/view?usp=sharing)
+and checkout the [Style Guide Elements](https://www.figma.com/design/x9TJM6LXEYHB4hlZHzZrwG/Applications?node-id=370-26).
+
 :construction: -- not fully implemented yet
 The project includes a read-only redux client. To run, create `.env.local`:
 
