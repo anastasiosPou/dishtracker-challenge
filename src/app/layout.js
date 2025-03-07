@@ -1,10 +1,18 @@
 'use client';
+import { Provider } from 'react-redux';
+
+import {store} from '../store';
+import { GatewayProvider } from '../GatewayProvider';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" style={{}}>
       <body>
-        {children}
+        <Provider store={store}>
+          <GatewayProvider>
+            {children}
+          </GatewayProvider>
+        </Provider>
       </body>
     </html>
   );
