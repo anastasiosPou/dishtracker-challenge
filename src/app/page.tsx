@@ -27,7 +27,7 @@ export default function Page() {
   return (
     <>
       <div>
-        <h3>User: {loadingWhoAmI ? "..." : JSON.stringify(whoAmI)}</h3>
+        <h4>User: {loadingWhoAmI ? "..." : JSON.stringify(whoAmI)}</h4>
         <h4>Enabled Products:{loadingEnabled ? "..." : ""}</h4>
         <ul>{enabledProducts?.data.map((p) => <li key={p.label}>{JSON.stringify(p)}</li>) || <p>None</p>}</ul>
         <h4>Disabled Products:{loadingDisabled ? "..." : ""}</h4>

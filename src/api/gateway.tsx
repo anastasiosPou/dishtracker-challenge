@@ -5,7 +5,6 @@ export type GatewayConfig = {
   bearerToken: string;
   locationId: string;
   configName: string | null;
-  baseUrl: string;
 }
 
 const DIS_938_PROXY = "https://checkout-cloud-proxy-xwjw6zpyiq-ew.a.run.app";
@@ -35,11 +34,7 @@ export function createGatewayApi(baseQuery = fetchBaseQuery) {
     const state = api.getState() as any;
     const config = state.gatewayApiConfig as GatewayConfig;
 
-    const baseUrl =
-      config.baseUrl.startsWith("https://recognition.dishtracker.io") ?
-        DIS_938_PROXY + (config.baseUrl.split("https://recognition.dishtracker.io")[1] || "")
-        : config.baseUrl;
-    console.log("proxiedBaseQuery", baseUrl, args);
+    const baseUrl = DIS_938_PROXY;
 
     const dynQuery = baseQuery({
       baseUrl,
