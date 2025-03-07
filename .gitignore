@@ -1,0 +1,11 @@
+/node_modules
+/.yarn/
+/.pnp*
+/.next/
+/next-env.d.ts
+/out/
+/tsconfig.json
+.env*.local
+.env
+
+.DS_Store
