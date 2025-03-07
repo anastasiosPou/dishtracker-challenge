@@ -1,1 +1,1645 @@
-{"openapi":"3.0.2","info":{"title":"ProductSync API Documentation","description":"[SwaggerUI - API playground](../docs)\n\n[Redoc - API documentation](../redoc)\n\n## Data model\n![Data model](_openapi_img/data-model.svg)\n\n### Product\n\nThe product resource represents a menu item.\n\n![Product data example](_openapi_img/product-json.svg)\n\n*Illustration of the normalized relational form of the data, not the API representation.*\n\n#### Attributes\n\n##### label\n\nLabels are how products are identified in the ProductSync and the labels by which the products are recognised by the Dishtracker App.\n\nFor the Dishtracker App recognition to work correctly the labels must follow the intended structure. The Dishtracker App will only allow labels following the regex:\n\n```regex\n^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$\n```\n\nIn addition, the product label should follow a taxonomy that adheres to the standard up to the first two levels, for efficient international support.\n\n##### name\n\nHuman-readable product name. Planned to be used as a display name in the Dishtracker App.\n\n##### plu\n\nCode used to book the product into the PoS system. Depending on the PoS system writing an EAN, barcode or similar into the PLU field may be appropriate.\n\n##### category\n\nCategory the product belongs to. The label of the category must be a prefix of the product label.\n\n### Category\n\n![Category data example](_openapi_img/category-json.svg)\n\n*Illustration of the normalized relational form of the data, not the API representation.*\n\n#### Attributes\n\n##### label\n\nLabels are how categories are identified in the ProductSync. Unlike product labels, categories and category labels aren't recognised by the Dishtracker App.\n\nSince category labels are prefixes of product labels they have to follow the structural rules of product labels.\n\n##### name\n\nHuman-readable category name. Planned to be used as a display name in the Dishtracker App.\n\n##### parent_category\n\nThe label of the parent category must be a prefix of the category label.\n\n### Camera Group\n\nA camera group represents any number of Dishtracker App instances which have the same set of products (menu) enabled.\n\n![Camera Group data example](_openapi_img/cameragroup-json.svg)\n\n*Illustration of the normalized relational form of the data, not the API representation.*\n\n#### Attributes\n\n##### name\n\nIdentifier and name of the camera group. The camera group name can only contain numbers and letters and must be less than 256 characters long.\n\n```regex\n^[a-zA-Z0-9\\-_]+$\n```\n\nThe camera group name is passed as an argument to any Dishtracker App instance that should update its catalog based on it.\n\n### Product Status\n\nProducts exist independently of camera groups. They can be enabled/disabled per camera group. A product status represents whether a product is enabled for a camera group.\n\n![Product Status data example](_openapi_img/productstatus-json.svg)\n\n*Illustration of the normalized relational form of the data, not the API representation.*\n\n#### Attributes\n\n##### label\n\nProduct label.\n\n##### enabled\n\nWhether the product is enabled or not. Dishtracker App instances will only consider products which are enabled in the camera group the Dishtracker App instance is subscribed for recognition.  \n\n##### camera_group\n\nThe camera group for which the product status applies.\n\n## Common use-cases\n\n### Add a new product and enable it for a Dishtracker app instance\n\nLet's say we want to add *Salami Pizza* to ProductSync. A fitting label for *Salami Pizza* according to the Label Taxonomy is `food.main.pizza.salami`.\n\nTo add `food.main.pizza.salami`, we have to make sure the category with the label `food.main.pizza` exists. The request to see if `food.main.pizza` exists is:\n\n```http request\nGET /api/v1/category/food.main.pizza\n```\n\nIf it doesn't exist, we have to make sure the parent categories `food` and `food.main` exist.\n\nTo create the category `food` send a request like:\n\n```http request\nPOST /api/v1/category\n\n{\n  \"label\": \"food\",\n  \"parent_category_label\": null,\n  \"name\": \"Food\"\n}\n```\n\nTo create the category `food.main` send a request like:\n\n```http request\nPOST /api/v1/category\n\n{\n  \"label\": \"food.main\",\n  \"parent_category_label\": \"food\",\n  \"name\": \"Main Dishes\"\n}\n```\n\nTo create the category `food.main.pizza` send a request like:\n\n```http request\nPOST /api/v1/category\n\n{\n  \"label\": \"food.main.pizza\",\n  \"parent_category_label\": \"food.main\",\n  \"name\": \"Pizza\"\n}\n```\n\nTo create the product `food.main.pizza.salami` send a request like:\n\n```http request\nPOST /api/v1/product\n\n{\n  \"label\": \"food.main.pizza.salami\",\n  \"name\": \"Pizza Salami\",\n  \"plu\": \"123456789\",\n  \"category\": \"food.main.pizza\"\n}\n```\n\nTo enable the product for the camera group *Pizza-POS* send a request like:\n\n```http request\nPUT /api/v1/camera-group/Pizza-POS/product/food.main.pizza.salami\n\n{\n  \"enabled\": true\n}\n```\n\nIf the camera group doesn't exist it first needs to be created with the request:\n\n```http request\nPOST /api/v1/camera-group\n\n{\n  \"name\": \"Pizza-POS\"\n}\n```\n\n### Enable or disable a product for Dishtracker App instance\n\nThe product catalog or menu of a Dishtracker App instance is not configured for the Dishtracker App instance directly but for its camera group. Changing a product status in a camera group will effect all Dishtracker App instances subscribed to the camera group.\n\nTo enable or disable a product for a camera group you need to know the camera group name (`camera_group_name`) as well as the product label (`label`).\n\nThe request to enable *Pizza Salami* in *Pizza-POS* is:\n\n```http request\nPUT /api/v1/camera-group/Pizza-POS/product/food.main.pizza.salami\n\n{\n  \"enabled\": true\n}\n```\n\nThe request to disable *Pizza Salami* in *Pizza-POS* is:\n\n```http request\nPUT /api/v1/camera-group/Pizza-POS/product/food.main.pizza.salami\n\n{\n  \"enabled\": false\n}\n```\n\n### Remove a product\n\nTo remove a product entirely from ProductSync, it first has to be removed from all camera groups.\n\nTo remove `food.main.pizza.salami` from camera group *Pizza-POS* use the request:\n\n```http request\nDELETE /api/v1/camera-group/Pizza-POS/product/food.main.pizza.salami\n```\n\nRemoving the product from the camera group functions similar to disabling it. In addition, the product won't be listed in labelling screen of the Dishtracker App.\nAt this point the product record is still present. To remove the product record use the request:\n\n```http request\nDELETE /api/v1/product/food.main.pizza.salami\n```\n\n### Change a product PLU and name\n\nChanging the PLU or name of a product will change it for all Dishtracker App instances subscribed to any of the camera groups on the ProductSync instance.\n\nTo change the PLU and name of the product `food.main.pizza.salami` use a request like this:\n\n```http request\nPUT /api/v1/product/food.main.pizza.salami\n\n{\n  \"label\": \"food.main.pizza.salami\",\n  \"name\": \"Pizza Salami\",\n  \"plu\": \"1122334455\",\n  \"category\": \"food.main.pizza\"\n}\n```\n\nThe fields `label` and `category` have to be included but can't be changed.\n\n### Set today's menu\n\nTo replace the entire menu of camera group *Pizza-POS* a request like this can be used:\n\n```http request\nPUT /api/v1/camera-group/Pizza-POS/product\n\n{\n  \"products\": [\n    {\n      \"enabled\": true,\n      \"label\": \"food.main.pizza.salami\"\n    },\n    {\n      \"enabled\": false,\n      \"label\": \"food.main.pizza.diabolo\"\n    }\n  ]\n}\n```\n\nFor product items with `enabled` set to `true`, the product status will be set to true.\nFor product items with `enabled` set to `false`, the product status will be set to false.\nAny product status the camera group has which is not included in this list be set to false as well.\n\nThis is endpoint is useful to integrate ProductSync with a menu planner software.\n","version":"0.8.1"},"paths":{"/api/v1/product":{"get":{"tags":["Product","ProductSync"],"summary":"List Products","operationId":"list_products","parameters":[{"required":false,"schema":{"title":"Offset","type":"integer","default":0},"name":"offset","in":"query"},{"required":false,"schema":{"title":"Limit","type":"integer","default":100},"name":"limit","in":"query"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PaginationResponseProduct"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"post":{"tags":["Product","ProductSync"],"summary":"Create Product","operationId":"create_product","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Product"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityCreated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]}},"/api/v1/product/{label}":{"get":{"tags":["Product","ProductSync"],"summary":"Read Product","operationId":"read_product","parameters":[{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Product"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"put":{"tags":["Product","ProductSync"],"summary":"Update Product","operationId":"update_product","parameters":[{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Product"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityUpdated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"delete":{"tags":["Product","ProductSync"],"summary":"Delete Product","operationId":"delete_product","parameters":[{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityDeleted"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]}},"/api/v1/category":{"get":{"tags":["Category","ProductSync"],"summary":"List Categories","operationId":"list_categories","parameters":[{"required":false,"schema":{"title":"Offset","type":"integer","default":0},"name":"offset","in":"query"},{"required":false,"schema":{"title":"Limit","type":"integer","default":100},"name":"limit","in":"query"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PaginationResponseCategory"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"post":{"tags":["Category","ProductSync"],"summary":"Create Category","operationId":"create_category","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CategoryRequest"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityCreated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]}},"/api/v1/category/{label}":{"get":{"tags":["Category","ProductSync"],"summary":"Read Category","operationId":"read_category","parameters":[{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Category"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"put":{"tags":["Category","ProductSync"],"summary":"Update Category","operationId":"update_category","parameters":[{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CategoryRequest"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityUpdated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"delete":{"tags":["Category","ProductSync"],"summary":"Delete Category","operationId":"delete_category","parameters":[{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"},{"required":false,"schema":{"title":"Force","type":"boolean","default":false},"name":"force","in":"query"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityDeleted"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]}},"/api/v1/camera-group":{"get":{"tags":["Camera Groups","ProductSync"],"summary":"List Camera Groups","operationId":"list_camera_groups","parameters":[{"required":false,"schema":{"title":"Offset","type":"integer","default":0},"name":"offset","in":"query"},{"required":false,"schema":{"title":"Limit","type":"integer","default":100},"name":"limit","in":"query"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PaginationResponseCameraGroup"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"post":{"tags":["Camera Groups","ProductSync"],"summary":"Create Camera Group","operationId":"create_camera_group","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CameraGroup"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityCreated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]}},"/api/v1/camera-group/{camera_group_name}":{"get":{"tags":["Camera Groups","ProductSync"],"summary":"Read Camera Group","operationId":"read_camera_group","parameters":[{"required":true,"schema":{"title":"Camera Group Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"},"name":"camera_group_name","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/CameraGroup"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"put":{"tags":["Camera Groups","ProductSync"],"summary":"Update Camera Group","operationId":"update_camera_group","parameters":[{"required":true,"schema":{"title":"Camera Group Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"},"name":"camera_group_name","in":"path"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CameraGroup"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityUpdated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"delete":{"tags":["Camera Groups","ProductSync"],"summary":"Delete Camera Group","operationId":"delete_camera_group","parameters":[{"required":true,"schema":{"title":"Camera Group Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"},"name":"camera_group_name","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityDeleted"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]}},"/api/v1/camera-group/{camera_group_name}/product":{"get":{"tags":["Product Status","ProductSync"],"summary":"Camera Group List Products","description":"Get the active status of products in this camera group.","operationId":"camera_group_list_products","parameters":[{"required":true,"schema":{"title":"Camera Group Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"},"name":"camera_group_name","in":"path"},{"required":false,"schema":{"title":"Enabled","type":"boolean"},"name":"enabled","in":"query"},{"required":false,"schema":{"title":"Offset","type":"integer","default":0},"name":"offset","in":"query"},{"required":false,"schema":{"title":"Limit","type":"integer","default":100},"name":"limit","in":"query"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PaginationResponseCameraGroupProductStatus"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"put":{"tags":["Product Status","ProductSync"],"summary":"Camera Group Bulk Update Products","description":"Set the active status of products in this camera group. Products not included in the request are deactivated.","operationId":"camera_group_bulk_update_products","parameters":[{"required":true,"schema":{"title":"Camera Group Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"},"name":"camera_group_name","in":"path"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProductStatusList"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityUpdated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]}},"/api/v1/camera-group/{camera_group_name}/product/{label}":{"get":{"tags":["Product Status","ProductSync"],"summary":"Camera Group Read Product","description":"Get the active status of one product in the camera group.","operationId":"camera_group_read_product","parameters":[{"required":true,"schema":{"title":"Camera Group Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"},"name":"camera_group_name","in":"path"},{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProductStatusResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"put":{"tags":["Product Status","ProductSync"],"summary":"Camera Group Update Product","description":"Set the active status of one product in the camera group.","operationId":"camera_group_update_product","parameters":[{"required":true,"schema":{"title":"Camera Group Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"},"name":"camera_group_name","in":"path"},{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProductStatusUpdate"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityUpdated"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]},"delete":{"tags":["Product Status","ProductSync"],"summary":"Camera Group Delete Product","description":"Remove a product from the camera group. This effectively deactivates the product but doesn't remove the product from the system. Use `DELETE /api/v1/product/{label}` instead if you want to remove the product from the system entirely.","operationId":"camera_group_delete_product","parameters":[{"required":true,"schema":{"title":"Camera Group Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"},"name":"camera_group_name","in":"path"},{"required":true,"schema":{"title":"Label","type":"string"},"name":"label","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EntityDeleted"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}},"security":[{"Location":[]},{"BearerAuth":[]}]}}},"components":{"schemas":{"CameraGroup":{"title":"CameraGroup","required":["name"],"type":"object","properties":{"name":{"title":"Name","maxLength":255,"pattern":"^[a-zA-Z0-9\\-_]+$","type":"string"}}},"Category":{"title":"Category","required":["label","name"],"type":"object","properties":{"label":{"title":"Label","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"},"parent_category":{"$ref":"#/components/schemas/SubCategory"},"products":{"title":"Products","type":"array","items":{"$ref":"#/components/schemas/Product"}},"child_categories":{"title":"Child Categories","type":"array","items":{"$ref":"#/components/schemas/SubCategory"}},"name":{"title":"Name","maxLength":255,"type":"string"}}},"CategoryRequest":{"title":"CategoryRequest","required":["label","name"],"type":"object","properties":{"label":{"title":"Label","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"},"parent_category_label":{"title":"Parent Category Label","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"},"name":{"title":"Name","maxLength":255,"type":"string"}},"description":"Entity for creating a new category.\n\n- **label**: Category label, hierarchical structured identifier of the category.\n- **parent_category_label**:\n- **name**: Human readable Category name."},"EntityCreated":{"title":"EntityCreated","required":["links"],"type":"object","properties":{"links":{"$ref":"#/components/schemas/Url"}}},"EntityDeleted":{"title":"EntityDeleted","type":"object","properties":{}},"EntityUpdated":{"title":"EntityUpdated","type":"object","properties":{}},"HTTPValidationError":{"title":"HTTPValidationError","type":"object","properties":{"detail":{"title":"Detail","type":"array","items":{"$ref":"#/components/schemas/ValidationError"}}}},"PaginationLinks":{"title":"PaginationLinks","required":["self"],"type":"object","properties":{"self":{"title":"Self","maxLength":65536,"minLength":1,"type":"string","format":"uri"},"next":{"title":"Next","maxLength":65536,"minLength":1,"type":"string","format":"uri"}}},"PaginationMeta":{"title":"PaginationMeta","required":["page"],"type":"object","properties":{"page":{"$ref":"#/components/schemas/PaginationMetaPage"}},"description":"Recommended way to return collection size\nhttps://jsonapi.org/profiles/ethanresnick/cursor-pagination/#auto-id-collection-sizes"},"PaginationMetaPage":{"title":"PaginationMetaPage","required":["total"],"type":"object","properties":{"total":{"title":"Total","type":"integer"}}},"PaginationResponseCameraGroup":{"title":"PaginationResponseCameraGroup","required":["links"],"type":"object","properties":{"meta":{"$ref":"#/components/schemas/PaginationMeta"},"links":{"$ref":"#/components/schemas/PaginationLinks"},"data":{"title":"Data","type":"array","items":{"$ref":"#/components/schemas/CameraGroup"}}}},"PaginationResponseCameraGroupProductStatus":{"title":"PaginationResponseCameraGroupProductStatus","required":["links"],"type":"object","properties":{"meta":{"$ref":"#/components/schemas/PaginationMeta"},"links":{"$ref":"#/components/schemas/PaginationLinks"},"data":{"title":"Data","type":"array","items":{"$ref":"#/components/schemas/ProductStatusResponse"}}}},"PaginationResponseCategory":{"title":"PaginationResponseCategory","required":["links"],"type":"object","properties":{"meta":{"$ref":"#/components/schemas/PaginationMeta"},"links":{"$ref":"#/components/schemas/PaginationLinks"},"data":{"title":"Data","type":"array","items":{"$ref":"#/components/schemas/Category"}}}},"PaginationResponseProduct":{"title":"PaginationResponseProduct","required":["links"],"type":"object","properties":{"meta":{"$ref":"#/components/schemas/PaginationMeta"},"links":{"$ref":"#/components/schemas/PaginationLinks"},"data":{"title":"Data","type":"array","items":{"$ref":"#/components/schemas/Product"}}}},"Product":{"title":"Product","required":["label","name","plu","category"],"type":"object","properties":{"label":{"title":"Label","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"},"name":{"title":"Name","maxLength":255,"type":"string"},"plu":{"title":"Plu","maxLength":255,"type":"string"},"category":{"title":"Category","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"}}},"ProductStatus":{"title":"ProductStatus","required":["enabled","label"],"type":"object","properties":{"enabled":{"title":"Enabled","type":"boolean"},"label":{"title":"Label","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"}}},"ProductStatusList":{"title":"ProductStatusList","type":"object","properties":{"products":{"title":"Products","type":"array","items":{"$ref":"#/components/schemas/ProductStatus"}}}},"ProductStatusResponse":{"title":"ProductStatusResponse","required":["enabled","label","name","plu","category"],"type":"object","properties":{"enabled":{"title":"Enabled","type":"boolean"},"label":{"title":"Label","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"},"name":{"title":"Name","maxLength":255,"type":"string"},"plu":{"title":"Plu","maxLength":255,"type":"string"},"category":{"title":"Category","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"}}},"ProductStatusUpdate":{"title":"ProductStatusUpdate","required":["enabled"],"type":"object","properties":{"enabled":{"title":"Enabled","type":"boolean"}}},"SubCategory":{"title":"SubCategory","required":["label","name"],"type":"object","properties":{"label":{"title":"Label","maxLength":255,"pattern":"^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$","type":"string"},"name":{"title":"Name","maxLength":255,"type":"string"}}},"Url":{"title":"Url","required":["url"],"type":"object","properties":{"url":{"title":"Url","maxLength":65536,"minLength":1,"type":"string","format":"uri"}}},"ValidationError":{"title":"ValidationError","required":["loc","msg","type"],"type":"object","properties":{"loc":{"title":"Location","type":"array","items":{"type":"string"}},"msg":{"title":"Message","type":"string"},"type":{"title":"Error Type","type":"string"}}}},"securitySchemes":{"Location":{"type":"apiKey","in":"header","name":"X-Location-Id"},"BearerAuth":{"type":"http","scheme":"bearer"}}},"tags":[{"name":"Camera Groups","description":"A camera group represents any number of Dishtracker App instances which have the same set of products (menu) enabled.\n"},{"name":"Category","description":""},{"name":"Product","description":"The product resource represents a menu item.\n"},{"name":"Product Status","description":"A product status represents whether a product is enabled for camera group.\n"},{"name":"ProductSync","description":"Having all the OpenAPI endpoints under a single tag is necessary to use\nsome OpenAPI tools like [OpenAPI Generator](https://openapi-generator.tech/)\neffectively.\n"}]}
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "ProductSync API Documentation",
+    "description": "[SwaggerUI - API playground](../docs)\n\n[Redoc - API documentation](../redoc)\n\n## Data model\n![Data model](_openapi_img/data-model.svg)\n\n### Product\n\nThe product resource represents a menu item.\n\n![Product data example](_openapi_img/product-json.svg)\n\n*Illustration of the normalized relational form of the data, not the API representation.*\n\n#### Attributes\n\n##### label\n\nLabels are how products are identified in the ProductSync and the labels by which the products are recognised by the Dishtracker App.\n\nFor the Dishtracker App recognition to work correctly the labels must follow the intended structure. The Dishtracker App will only allow labels following the regex:\n\n```regex\n^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$\n```\n\nIn addition, the product label should follow a taxonomy that adheres to the standard up to the first two levels, for efficient international support.\n\n##### name\n\nHuman-readable product name. Planned to be used as a display name in the Dishtracker App.\n\n##### plu\n\nCode used to book the product into the PoS system. Depending on the PoS system writing an EAN, barcode or similar into the PLU field may be appropriate.\n\n##### category\n\nCategory the product belongs to. The label of the category must be a prefix of the product label.\n\n### Category\n\n![Category data example](_openapi_img/category-json.svg)\n\n*Illustration of the normalized relational form of the data, not the API representation.*\n\n#### Attributes\n\n##### label\n\nLabels are how categories are identified in the ProductSync. Unlike product labels, categories and category labels aren't recognised by the Dishtracker App.\n\nSince category labels are prefixes of product labels they have to follow the structural rules of product labels.\n\n##### name\n\nHuman-readable category name. Planned to be used as a display name in the Dishtracker App.\n\n##### parent_category\n\nThe label of the parent category must be a prefix of the category label.\n\n### Camera Group\n\nA camera group represents any number of Dishtracker App instances which have the same set of products (menu) enabled.\n\n![Camera Group data example](_openapi_img/cameragroup-json.svg)\n\n*Illustration of the normalized relational form of the data, not the API representation.*\n\n#### Attributes\n\n##### name\n\nIdentifier and name of the camera group. The camera group name can only contain numbers and letters and must be less than 256 characters long.\n\n```regex\n^[a-zA-Z0-9\\-_]+$\n```\n\nThe camera group name is passed as an argument to any Dishtracker App instance that should update its catalog based on it.\n\n### Product Status\n\nProducts exist independently of camera groups. They can be enabled/disabled per camera group. A product status represents whether a product is enabled for a camera group.\n\n![Product Status data example](_openapi_img/productstatus-json.svg)\n\n*Illustration of the normalized relational form of the data, not the API representation.*\n\n#### Attributes\n\n##### label\n\nProduct label.\n\n##### enabled\n\nWhether the product is enabled or not. Dishtracker App instances will only consider products which are enabled in the camera group the Dishtracker App instance is subscribed for recognition.  \n\n##### camera_group\n\nThe camera group for which the product status applies.\n\n## Common use-cases\n\n### Add a new product and enable it for a Dishtracker app instance\n\nLet's say we want to add *Salami Pizza* to ProductSync. A fitting label for *Salami Pizza* according to the Label Taxonomy is `food.main.pizza.salami`.\n\nTo add `food.main.pizza.salami`, we have to make sure the category with the label `food.main.pizza` exists. The request to see if `food.main.pizza` exists is:\n\n```http request\nGET /api/v1/category/food.main.pizza\n```\n\nIf it doesn't exist, we have to make sure the parent categories `food` and `food.main` exist.\n\nTo create the category `food` send a request like:\n\n```http request\nPOST /api/v1/category\n\n{\n  \"label\": \"food\",\n  \"parent_category_label\": null,\n  \"name\": \"Food\"\n}\n```\n\nTo create the category `food.main` send a request like:\n\n```http request\nPOST /api/v1/category\n\n{\n  \"label\": \"food.main\",\n  \"parent_category_label\": \"food\",\n  \"name\": \"Main Dishes\"\n}\n```\n\nTo create the category `food.main.pizza` send a request like:\n\n```http request\nPOST /api/v1/category\n\n{\n  \"label\": \"food.main.pizza\",\n  \"parent_category_label\": \"food.main\",\n  \"name\": \"Pizza\"\n}\n```\n\nTo create the product `food.main.pizza.salami` send a request like:\n\n```http request\nPOST /api/v1/product\n\n{\n  \"label\": \"food.main.pizza.salami\",\n  \"name\": \"Pizza Salami\",\n  \"plu\": \"123456789\",\n  \"category\": \"food.main.pizza\"\n}\n```\n\nTo enable the product for the camera group *Pizza-POS* send a request like:\n\n```http request\nPUT /api/v1/camera-group/Pizza-POS/product/food.main.pizza.salami\n\n{\n  \"enabled\": true\n}\n```\n\nIf the camera group doesn't exist it first needs to be created with the request:\n\n```http request\nPOST /api/v1/camera-group\n\n{\n  \"name\": \"Pizza-POS\"\n}\n```\n\n### Enable or disable a product for Dishtracker App instance\n\nThe product catalog or menu of a Dishtracker App instance is not configured for the Dishtracker App instance directly but for its camera group. Changing a product status in a camera group will effect all Dishtracker App instances subscribed to the camera group.\n\nTo enable or disable a product for a camera group you need to know the camera group name (`camera_group_name`) as well as the product label (`label`).\n\nThe request to enable *Pizza Salami* in *Pizza-POS* is:\n\n```http request\nPUT /api/v1/camera-group/Pizza-POS/product/food.main.pizza.salami\n\n{\n  \"enabled\": true\n}\n```\n\nThe request to disable *Pizza Salami* in *Pizza-POS* is:\n\n```http request\nPUT /api/v1/camera-group/Pizza-POS/product/food.main.pizza.salami\n\n{\n  \"enabled\": false\n}\n```\n\n### Remove a product\n\nTo remove a product entirely from ProductSync, it first has to be removed from all camera groups.\n\nTo remove `food.main.pizza.salami` from camera group *Pizza-POS* use the request:\n\n```http request\nDELETE /api/v1/camera-group/Pizza-POS/product/food.main.pizza.salami\n```\n\nRemoving the product from the camera group functions similar to disabling it. In addition, the product won't be listed in labelling screen of the Dishtracker App.\nAt this point the product record is still present. To remove the product record use the request:\n\n```http request\nDELETE /api/v1/product/food.main.pizza.salami\n```\n\n### Change a product PLU and name\n\nChanging the PLU or name of a product will change it for all Dishtracker App instances subscribed to any of the camera groups on the ProductSync instance.\n\nTo change the PLU and name of the product `food.main.pizza.salami` use a request like this:\n\n```http request\nPUT /api/v1/product/food.main.pizza.salami\n\n{\n  \"label\": \"food.main.pizza.salami\",\n  \"name\": \"Pizza Salami\",\n  \"plu\": \"1122334455\",\n  \"category\": \"food.main.pizza\"\n}\n```\n\nThe fields `label` and `category` have to be included but can't be changed.\n\n### Set today's menu\n\nTo replace the entire menu of camera group *Pizza-POS* a request like this can be used:\n\n```http request\nPUT /api/v1/camera-group/Pizza-POS/product\n\n{\n  \"products\": [\n    {\n      \"enabled\": true,\n      \"label\": \"food.main.pizza.salami\"\n    },\n    {\n      \"enabled\": false,\n      \"label\": \"food.main.pizza.diabolo\"\n    }\n  ]\n}\n```\n\nFor product items with `enabled` set to `true`, the product status will be set to true.\nFor product items with `enabled` set to `false`, the product status will be set to false.\nAny product status the camera group has which is not included in this list be set to false as well.\n\nThis is endpoint is useful to integrate ProductSync with a menu planner software.\n",
+    "version": "0.8.1"
+  },
+  "paths": {
+    "/api/v1/product": {
+      "get": {
+        "tags": [
+          "Product",
+          "ProductSync"
+        ],
+        "summary": "List Products",
+        "operationId": "list_products",
+        "parameters": [
+          {
+            "required": false,
+            "schema": {
+              "title": "Offset",
+              "type": "integer",
+              "default": 0
+            },
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Limit",
+              "type": "integer",
+              "default": 100
+            },
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponseProduct"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Product",
+          "ProductSync"
+        ],
+        "summary": "Create Product",
+        "operationId": "create_product",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Product"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/product/{label}": {
+      "get": {
+        "tags": [
+          "Product",
+          "ProductSync"
+        ],
+        "summary": "Read Product",
+        "operationId": "read_product",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Product",
+          "ProductSync"
+        ],
+        "summary": "Update Product",
+        "operationId": "update_product",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Product"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityUpdated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Product",
+          "ProductSync"
+        ],
+        "summary": "Delete Product",
+        "operationId": "delete_product",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityDeleted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/category": {
+      "get": {
+        "tags": [
+          "Category",
+          "ProductSync"
+        ],
+        "summary": "List Categories",
+        "operationId": "list_categories",
+        "parameters": [
+          {
+            "required": false,
+            "schema": {
+              "title": "Offset",
+              "type": "integer",
+              "default": 0
+            },
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Limit",
+              "type": "integer",
+              "default": 100
+            },
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponseCategory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Category",
+          "ProductSync"
+        ],
+        "summary": "Create Category",
+        "operationId": "create_category",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/category/{label}": {
+      "get": {
+        "tags": [
+          "Category",
+          "ProductSync"
+        ],
+        "summary": "Read Category",
+        "operationId": "read_category",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Category",
+          "ProductSync"
+        ],
+        "summary": "Update Category",
+        "operationId": "update_category",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityUpdated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Category",
+          "ProductSync"
+        ],
+        "summary": "Delete Category",
+        "operationId": "delete_category",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Force",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "force",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityDeleted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/camera-group": {
+      "get": {
+        "tags": [
+          "Camera Groups",
+          "ProductSync"
+        ],
+        "summary": "List Camera Groups",
+        "operationId": "list_camera_groups",
+        "parameters": [
+          {
+            "required": false,
+            "schema": {
+              "title": "Offset",
+              "type": "integer",
+              "default": 0
+            },
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Limit",
+              "type": "integer",
+              "default": 100
+            },
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponseCameraGroup"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Camera Groups",
+          "ProductSync"
+        ],
+        "summary": "Create Camera Group",
+        "operationId": "create_camera_group",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CameraGroup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/camera-group/{camera_group_name}": {
+      "get": {
+        "tags": [
+          "Camera Groups",
+          "ProductSync"
+        ],
+        "summary": "Read Camera Group",
+        "operationId": "read_camera_group",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Camera Group Name",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9\\-_]+$",
+              "type": "string"
+            },
+            "name": "camera_group_name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CameraGroup"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Camera Groups",
+          "ProductSync"
+        ],
+        "summary": "Update Camera Group",
+        "operationId": "update_camera_group",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Camera Group Name",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9\\-_]+$",
+              "type": "string"
+            },
+            "name": "camera_group_name",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CameraGroup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityUpdated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Camera Groups",
+          "ProductSync"
+        ],
+        "summary": "Delete Camera Group",
+        "operationId": "delete_camera_group",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Camera Group Name",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9\\-_]+$",
+              "type": "string"
+            },
+            "name": "camera_group_name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityDeleted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/camera-group/{camera_group_name}/product": {
+      "get": {
+        "tags": [
+          "Product Status",
+          "ProductSync"
+        ],
+        "summary": "Camera Group List Products",
+        "description": "Get the active status of products in this camera group.",
+        "operationId": "camera_group_list_products",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Camera Group Name",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9\\-_]+$",
+              "type": "string"
+            },
+            "name": "camera_group_name",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Enabled",
+              "type": "boolean"
+            },
+            "name": "enabled",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Offset",
+              "type": "integer",
+              "default": 0
+            },
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Limit",
+              "type": "integer",
+              "default": 100
+            },
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponseCameraGroupProductStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Product Status",
+          "ProductSync"
+        ],
+        "summary": "Camera Group Bulk Update Products",
+        "description": "Set the active status of products in this camera group. Products not included in the request are deactivated.",
+        "operationId": "camera_group_bulk_update_products",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Camera Group Name",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9\\-_]+$",
+              "type": "string"
+            },
+            "name": "camera_group_name",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductStatusList"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityUpdated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/camera-group/{camera_group_name}/product/{label}": {
+      "get": {
+        "tags": [
+          "Product Status",
+          "ProductSync"
+        ],
+        "summary": "Camera Group Read Product",
+        "description": "Get the active status of one product in the camera group.",
+        "operationId": "camera_group_read_product",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Camera Group Name",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9\\-_]+$",
+              "type": "string"
+            },
+            "name": "camera_group_name",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Product Status",
+          "ProductSync"
+        ],
+        "summary": "Camera Group Update Product",
+        "description": "Set the active status of one product in the camera group.",
+        "operationId": "camera_group_update_product",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Camera Group Name",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9\\-_]+$",
+              "type": "string"
+            },
+            "name": "camera_group_name",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductStatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityUpdated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Product Status",
+          "ProductSync"
+        ],
+        "summary": "Camera Group Delete Product",
+        "description": "Remove a product from the camera group. This effectively deactivates the product but doesn't remove the product from the system. Use `DELETE /api/v1/product/{label}` instead if you want to remove the product from the system entirely.",
+        "operationId": "camera_group_delete_product",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Camera Group Name",
+              "maxLength": 255,
+              "pattern": "^[a-zA-Z0-9\\-_]+$",
+              "type": "string"
+            },
+            "name": "camera_group_name",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "title": "Label",
+              "type": "string"
+            },
+            "name": "label",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityDeleted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Location": []
+          },
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CameraGroup": {
+        "title": "CameraGroup",
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "maxLength": 255,
+            "pattern": "^[a-zA-Z0-9\\-_]+$",
+            "type": "string"
+          }
+        }
+      },
+      "Category": {
+        "title": "Category",
+        "required": [
+          "label",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          },
+          "parent_category": {
+            "$ref": "#/components/schemas/SubCategory"
+          },
+          "products": {
+            "title": "Products",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          },
+          "child_categories": {
+            "title": "Child Categories",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubCategory"
+            }
+          },
+          "name": {
+            "title": "Name",
+            "maxLength": 255,
+            "type": "string"
+          }
+        }
+      },
+      "CategoryRequest": {
+        "title": "CategoryRequest",
+        "required": [
+          "label",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          },
+          "parent_category_label": {
+            "title": "Parent Category Label",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "maxLength": 255,
+            "type": "string"
+          }
+        },
+        "description": "Entity for creating a new category.\n\n- **label**: Category label, hierarchical structured identifier of the category.\n- **parent_category_label**:\n- **name**: Human readable Category name."
+      },
+      "EntityCreated": {
+        "title": "EntityCreated",
+        "required": [
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "links": {
+            "$ref": "#/components/schemas/Url"
+          }
+        }
+      },
+      "EntityDeleted": {
+        "title": "EntityDeleted",
+        "type": "object",
+        "properties": {}
+      },
+      "EntityUpdated": {
+        "title": "EntityUpdated",
+        "type": "object",
+        "properties": {}
+      },
+      "HTTPValidationError": {
+        "title": "HTTPValidationError",
+        "type": "object",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "PaginationLinks": {
+        "title": "PaginationLinks",
+        "required": [
+          "self"
+        ],
+        "type": "object",
+        "properties": {
+          "self": {
+            "title": "Self",
+            "maxLength": 65536,
+            "minLength": 1,
+            "type": "string",
+            "format": "uri"
+          },
+          "next": {
+            "title": "Next",
+            "maxLength": 65536,
+            "minLength": 1,
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "PaginationMeta": {
+        "title": "PaginationMeta",
+        "required": [
+          "page"
+        ],
+        "type": "object",
+        "properties": {
+          "page": {
+            "$ref": "#/components/schemas/PaginationMetaPage"
+          }
+        },
+        "description": "Recommended way to return collection size\nhttps://jsonapi.org/profiles/ethanresnick/cursor-pagination/#auto-id-collection-sizes"
+      },
+      "PaginationMetaPage": {
+        "title": "PaginationMetaPage",
+        "required": [
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        }
+      },
+      "PaginationResponseCameraGroup": {
+        "title": "PaginationResponseCameraGroup",
+        "required": [
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "data": {
+            "title": "Data",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CameraGroup"
+            }
+          }
+        }
+      },
+      "PaginationResponseCameraGroupProductStatus": {
+        "title": "PaginationResponseCameraGroupProductStatus",
+        "required": [
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "data": {
+            "title": "Data",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductStatusResponse"
+            }
+          }
+        }
+      },
+      "PaginationResponseCategory": {
+        "title": "PaginationResponseCategory",
+        "required": [
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "data": {
+            "title": "Data",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            }
+          }
+        }
+      },
+      "PaginationResponseProduct": {
+        "title": "PaginationResponseProduct",
+        "required": [
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "data": {
+            "title": "Data",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          }
+        }
+      },
+      "Product": {
+        "title": "Product",
+        "required": [
+          "label",
+          "name",
+          "plu",
+          "category"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "maxLength": 255,
+            "type": "string"
+          },
+          "plu": {
+            "title": "Plu",
+            "maxLength": 255,
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          }
+        }
+      },
+      "ProductStatus": {
+        "title": "ProductStatus",
+        "required": [
+          "enabled",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          }
+        }
+      },
+      "ProductStatusList": {
+        "title": "ProductStatusList",
+        "type": "object",
+        "properties": {
+          "products": {
+            "title": "Products",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductStatus"
+            }
+          }
+        }
+      },
+      "ProductStatusResponse": {
+        "title": "ProductStatusResponse",
+        "required": [
+          "enabled",
+          "label",
+          "name",
+          "plu",
+          "category"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "maxLength": 255,
+            "type": "string"
+          },
+          "plu": {
+            "title": "Plu",
+            "maxLength": 255,
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          }
+        }
+      },
+      "ProductStatusUpdate": {
+        "title": "ProductStatusUpdate",
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        }
+      },
+      "SubCategory": {
+        "title": "SubCategory",
+        "required": [
+          "label",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "maxLength": 255,
+            "pattern": "^([a-zäöü0-9_&ß]+)(\\.[a-zäöü0-9_&ß]+)*$",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "maxLength": 255,
+            "type": "string"
+          }
+        }
+      },
+      "Url": {
+        "title": "Url",
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "title": "Url",
+            "maxLength": 65536,
+            "minLength": 1,
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "ValidationError": {
+        "title": "ValidationError",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "loc": {
+            "title": "Location",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "Location": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Location-Id"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Camera Groups",
+      "description": "A camera group represents any number of Dishtracker App instances which have the same set of products (menu) enabled.\n"
+    },
+    {
+      "name": "Category",
+      "description": ""
+    },
+    {
+      "name": "Product",
+      "description": "The product resource represents a menu item.\n"
+    },
+    {
+      "name": "Product Status",
+      "description": "A product status represents whether a product is enabled for camera group.\n"
+    },
+    {
+      "name": "ProductSync",
+      "description": "Having all the OpenAPI endpoints under a single tag is necessary to use\nsome OpenAPI tools like [OpenAPI Generator](https://openapi-generator.tech/)\neffectively.\n"
+    }
+  ]
+}
