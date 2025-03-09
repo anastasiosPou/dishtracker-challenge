@@ -1,18 +1,15 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { BaseQueryFn, createApi, FetchArgs, fetchBaseQuery, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 
+//Variables and constants
+const DIS_938_PROXY = "https://checkout-cloud-proxy-xwjw6zpyiq-ew.a.run.app";
+
+//Types
 export type GatewayConfig = {
   bearerToken: string;
   locationId: string;
   configName: string | null;
 }
-
-const DIS_938_PROXY = "https://checkout-cloud-proxy-xwjw6zpyiq-ew.a.run.app";
-
-function transformErrorResponse(error: any): FetchBaseQueryError {
-  return error.data?.detail ? { ...error, data: error.data.detail } : error;
-}
-
 
 export type ProductStatus = {
   enabled: boolean;
@@ -27,16 +24,22 @@ export type ProductSync<T> = {
   data: T
 }
 
-// Create 'gateway' reducer for api requests and 'gatewayApiConfig' slice to
-// set GatewayConfig.
-export function createGatewayApi(baseQuery = fetchBaseQuery) {
+function transformErrorResponse(error: any): FetchBaseQueryError {
+  return error.data?.detail ? { ...error, data: error.data.detail } : error;
+}
+
+/*
+  The createGatewayApi creates the gatewayApi(aka RTK Query) and a slice that 
+  manages the configuration that enables the communication with the endpoints.
+*/
+export function createGatewayApi() {
   const proxiedBaseQuery: BaseQueryFn<any, any, any> = async (args, api, extraOptions) => {
     const state = api.getState() as any;
     const config = state.gatewayApiConfig as GatewayConfig;
 
     const baseUrl = DIS_938_PROXY;
 
-    const dynQuery = baseQuery({
+    const dynQuery = fetchBaseQuery({
       baseUrl,
       prepareHeaders: (headers) => {
         headers.set('content-type', 'application/json');
@@ -89,10 +92,7 @@ export function createGatewayApi(baseQuery = fetchBaseQuery) {
         providesTags: ["WhoAmI"],
         // transformErrorResponse is not applied in queryFn, lol
       }),
-      getCameraGroupProducts: builder.query<
-        ProductSync<ProductStatus[]>,
-        { cameraGroup: string; enabled?: boolean | null }
-      >({
+      getCameraGroupProducts: builder.query<ProductSync<ProductStatus[]>, { cameraGroup: string; enabled?: boolean | null }>({
         query: ({ cameraGroup, enabled }) => {
           // Construct query string dynamically
           const params = new URLSearchParams();
@@ -115,7 +115,14 @@ export function createGatewayApi(baseQuery = fetchBaseQuery) {
         providesTags: (result, error, { cameraGroup }) =>
           result ? [{ type: "CameraGroupProducts", id: `${cameraGroup}-disabled` }] : [],
       }),
-
+      createCameraGroup: builder.mutation<any, string>({
+        query: (cameraGroup) => ({
+          url: '/api/v1/camera-group',
+          method: 'POST',
+          body: {name: cameraGroup}
+        }),
+        transformErrorResponse
+      })
     }),
   });
 
