@@ -16,6 +16,7 @@ export type ProductStatus = {
   label: string;
   name: string;
   plu: string;
+  category: string;
 }
 
 export type ProductSync<T> = {
@@ -23,6 +24,8 @@ export type ProductSync<T> = {
   links: any;
   data: T
 }
+
+export type NewProduct = Pick<ProductStatus, 'label' | 'name' | 'plu' | 'category'>
 
 function transformErrorResponse(error: any): FetchBaseQueryError {
   return error.data?.detail ? { ...error, data: error.data.detail } : error;
@@ -61,7 +64,7 @@ export function createGatewayApi() {
   const gatewayApi = createApi({
     reducerPath: 'gateway',
     baseQuery: proxiedBaseQuery,
-    tagTypes: ["WhoAmI", "CameraGroupProducts"],
+    tagTypes: ["WhoAmI", "CameraGroupProducts", 'Product'],
     endpoints: (builder) => ({
       getWhoAmI: builder.query<{ user_id: number, email: string, team_id: number }, void>({
         query: () => "/api/v1/whoami",
@@ -109,19 +112,26 @@ export function createGatewayApi() {
         providesTags: (result, error, { cameraGroup }) =>
           result ? [{ type: "CameraGroupProducts", id: `${cameraGroup}-enabled` }] : [],
       }),
-
       getDisabledCameraGroupProducts: builder.query<ProductSync<ProductStatus[]>, { cameraGroup: string }>({
         query: ({ cameraGroup }) => `/api/v1/camera-group/${cameraGroup}/product?enabled=false`,
         providesTags: (result, error, { cameraGroup }) =>
           result ? [{ type: "CameraGroupProducts", id: `${cameraGroup}-disabled` }] : [],
       }),
-      createCameraGroup: builder.mutation<any, string>({
+      createCameraGroup: builder.mutation<undefined, string>({
         query: (cameraGroup) => ({
           url: '/api/v1/camera-group',
           method: 'POST',
           body: {name: cameraGroup}
         }),
         transformErrorResponse
+      }),
+      createProduct: builder.mutation<ProductSync<ProductStatus>, NewProduct>({
+        query: (newProduct) => ({
+          url: 'api/v1/product',
+          method: 'POST',
+          body: newProduct
+        }),
+        invalidatesTags: ['Product']
       })
     }),
   });
