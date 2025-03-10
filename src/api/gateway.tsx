@@ -9,6 +9,7 @@ export type GatewayConfig = {
   bearerToken: string;
   locationId: string;
   configName: string | null;
+  baseUrl: string
 }
 
 export type ProductStatus = {
@@ -124,6 +125,11 @@ export function createGatewayApi() {
         },
         providesTags: ["WhoAmI"],
         // transformErrorResponse is not applied in queryFn, lol
+      }),
+      getAllProducts: builder.query<ProductSync<ProductStatus[]>, void>({
+        query: () => 'api/v1/product?offset=0&limit=100',
+        //TODO I need to create specific tags for each product
+        providesTags: ['CameraGroupProducts']
       }),
       getCameraGroupProducts: builder.query<ProductSync<ProductStatus[]>, { cameraGroup: string; enabled?: boolean | null }>({
         query: ({ cameraGroup, enabled }) => {
