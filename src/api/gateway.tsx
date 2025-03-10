@@ -184,6 +184,14 @@ export function createGatewayApi() {
         }),
         //TODO: I need to invalidate only the specific product, not all the products.
         invalidatesTags: (result, error, arg) => [{type: 'CameraGroupProducts', id: `${arg.cameraGroup}-enabled`}]
+      }),
+      removeProduct: builder.mutation<void, string>({
+        query: (productLabel) => ({
+          url: `/api/v1/product/${productLabel}`,
+          method: 'DELETE'
+        }),
+        //TODO: I need to invalidate only the specific product, not all the products.
+        invalidatesTags: ['CameraGroupProducts']
       })
     }),
   });
