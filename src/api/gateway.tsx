@@ -4,7 +4,7 @@ import { BaseQueryFn, createApi, FetchArgs, fetchBaseQuery, FetchBaseQueryError 
 //Variables and constants
 const DIS_938_PROXY = "https://checkout-cloud-proxy-xwjw6zpyiq-ew.a.run.app";
 
-//Types
+//Types and Interfaces
 export type GatewayConfig = {
   bearerToken: string;
   locationId: string;
@@ -26,6 +26,27 @@ export type ProductSync<T> = {
 }
 
 export type NewProduct = Pick<ProductStatus, 'label' | 'name' | 'plu' | 'category'>
+
+export interface Category {
+  label: string;
+  parent_category: Category;
+  products: ProductStatus[];
+  name: string;
+  child_categories: Category[];
+}
+
+export type NewCategory = {
+  label: string;
+  parent_category_label: string | null;
+  name: string;
+}
+
+export type CategoryResponse = {
+  links: {
+    url: string;
+  }
+}
+
 
 function transformErrorResponse(error: any): FetchBaseQueryError {
   return error.data?.detail ? { ...error, data: error.data.detail } : error;
@@ -64,7 +85,7 @@ export function createGatewayApi() {
   const gatewayApi = createApi({
     reducerPath: 'gateway',
     baseQuery: proxiedBaseQuery,
-    tagTypes: ["WhoAmI", "CameraGroupProducts", 'Product'],
+    tagTypes: ["WhoAmI", "CameraGroupProducts", 'Product', 'Category'],
     endpoints: (builder) => ({
       getWhoAmI: builder.query<{ user_id: number, email: string, team_id: number }, void>({
         query: () => "/api/v1/whoami",
@@ -132,6 +153,14 @@ export function createGatewayApi() {
           body: newProduct
         }),
         invalidatesTags: ['Product']
+      }),
+      createCategory: builder.mutation<CategoryResponse, NewCategory>({
+        query: (newCategory) => ({
+          url: 'api/v1/category',
+          method: 'POST',
+          body: newCategory
+        }),
+        invalidatesTags: ['Category']
       })
     }),
   });
