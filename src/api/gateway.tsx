@@ -25,14 +25,16 @@ export type ProductSync<T> = {
   data: T
 }
 
-export type NewProduct = Pick<ProductStatus, 'label' | 'name' | 'plu' | 'category'>
+export type NewProduct = Pick<ProductStatus, 'label' | 'name' | 'plu' | 'category'>;
+
+export type UpdatedProduct = NewProduct;
 
 export type EnabledProduct = {
   cameraGroup: string;
   label: string;
 }
 
-export type DisabledProduct = EnabledProduct
+export type DisabledProduct = EnabledProduct;
 
 export interface Category {
   label: string;
@@ -189,6 +191,15 @@ export function createGatewayApi() {
         query: (productLabel) => ({
           url: `/api/v1/product/${productLabel}`,
           method: 'DELETE'
+        }),
+        //TODO: I need to invalidate only the specific product, not all the products.
+        invalidatesTags: ['CameraGroupProducts']
+      }),
+      updateProduct: builder.mutation<null, UpdatedProduct>({
+        query: (updatedProduct) => ({
+          url: `/api/v1/product/${updatedProduct.label}`,
+          method: 'PUT',
+          body: updatedProduct
         }),
         //TODO: I need to invalidate only the specific product, not all the products.
         invalidatesTags: ['CameraGroupProducts']
