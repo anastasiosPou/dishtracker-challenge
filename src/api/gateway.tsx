@@ -26,7 +26,10 @@ export type ProductSync<T> = {
 }
 
 export type NewProduct = Pick<ProductStatus, 'label' | 'name' | 'plu' | 'category'>
-
+export type EnabledProduct = {
+  cameraGroup: string;
+  label: string;
+}
 export interface Category {
   label: string;
   parent_category: Category;
@@ -131,7 +134,7 @@ export function createGatewayApi() {
       getEnabledCameraGroupProducts: builder.query<ProductSync<ProductStatus[]>, { cameraGroup: string }>({
         query: ({ cameraGroup }) => `/api/v1/camera-group/${cameraGroup}/product?enabled=true`,
         providesTags: (result, error, { cameraGroup }) =>
-          result ? [{ type: "CameraGroupProducts", id: `${cameraGroup}-enabled` }] : [],
+          result ? ["CameraGroupProducts",{ type: "CameraGroupProducts", id: `${cameraGroup}-enabled` }] : [],
       }),
       getDisabledCameraGroupProducts: builder.query<ProductSync<ProductStatus[]>, { cameraGroup: string }>({
         query: ({ cameraGroup }) => `/api/v1/camera-group/${cameraGroup}/product?enabled=false`,
@@ -148,7 +151,7 @@ export function createGatewayApi() {
       }),
       createProduct: builder.mutation<ProductSync<ProductStatus>, NewProduct>({
         query: (newProduct) => ({
-          url: 'api/v1/product',
+          url: '/api/v1/product',
           method: 'POST',
           body: newProduct
         }),
@@ -156,11 +159,19 @@ export function createGatewayApi() {
       }),
       createCategory: builder.mutation<CategoryResponse, NewCategory>({
         query: (newCategory) => ({
-          url: 'api/v1/category',
+          url: '/api/v1/category',
           method: 'POST',
           body: newCategory
         }),
         invalidatesTags: ['Category']
+      }),
+      enableProduct: builder.mutation<void, EnabledProduct>({
+        query: (enabledProduct) => ({
+          url: `/api/v1/camera-group/${enabledProduct.cameraGroup}/product/${enabledProduct.label}`,
+          method: 'PUT',
+          body: {enabled: true}
+        }),
+        invalidatesTags: (result, error, arg) => [{ type: 'CameraGroupProducts', id: `${arg.cameraGroup}-enabled` }]
       })
     }),
   });
