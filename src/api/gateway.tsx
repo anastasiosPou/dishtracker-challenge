@@ -26,10 +26,14 @@ export type ProductSync<T> = {
 }
 
 export type NewProduct = Pick<ProductStatus, 'label' | 'name' | 'plu' | 'category'>
+
 export type EnabledProduct = {
   cameraGroup: string;
   label: string;
 }
+
+export type DisabledProduct = EnabledProduct
+
 export interface Category {
   label: string;
   parent_category: Category;
@@ -172,6 +176,14 @@ export function createGatewayApi() {
           body: {enabled: true}
         }),
         invalidatesTags: (result, error, arg) => [{ type: 'CameraGroupProducts', id: `${arg.cameraGroup}-enabled` }]
+      }),
+      disableProduct: builder.mutation<void, DisabledProduct>({
+        query: ({cameraGroup, label}) => ({
+          url: `/api/v1/camera-group/${cameraGroup}/product/${label}`,
+          method: 'DELETE'
+        }),
+        //TODO: I need to invalidate only the specific product, not all the products.
+        invalidatesTags: (result, error, arg) => [{type: 'CameraGroupProducts', id: `${arg.cameraGroup}-enabled`}]
       })
     }),
   });
