@@ -179,7 +179,7 @@ export function createGatewayApi() {
           method: 'POST',
           body: newProduct
         }),
-        invalidatesTags: ['Product']
+        invalidatesTags: ['Products']
       }),
       createCategory: builder.mutation<CategoryResponse, NewCategory>({
         query: (newCategory) => ({
@@ -206,7 +206,6 @@ export function createGatewayApi() {
           url: `/api/v1/camera-group/${cameraGroup}/product/${label}`,
           method: 'DELETE'
         }),
-        //TODO: I need to invalidate only the specific product, not all the products.
         invalidatesTags: (result, error, arg) => [
           {type: 'Product', id: arg.label},
           'Products',
@@ -228,7 +227,11 @@ export function createGatewayApi() {
           body: updatedProduct
         }),
         //TODO: I need to invalidate only the specific product, not all the products.
-        invalidatesTags: ['CameraGroupProducts']
+        invalidatesTags: (result, error, arg) => [
+          {type: 'Product', id: arg.label},
+          'Products',
+          'CameraGroupProducts'
+        ]
       })
     }),
   });
