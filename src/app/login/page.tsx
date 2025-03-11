@@ -99,7 +99,7 @@ export default function Login() {
       */
       dispatch(gatewayActions.setCameraGroup(cameraGroup));
       //We should show the dashboard if the login was successfull
-      router.push('/dashboard');
+      router.push(`/dashboard/allProducts?cameraGroup=${cameraGroup}`);
     }
     catch (cameraGroupError) {
       inputErrors['CameraGroupError'] = `${cameraGroup} ${cameraGroupError.data}`;
