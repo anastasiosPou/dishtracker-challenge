@@ -11,6 +11,7 @@ import { useRef, useState } from "react";
 import { ProductStatus } from "../../api/gateway";
 import { gatewayApi } from "../../store";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 const {useEnableProductMutation, useDisableProductMutation, useGetCameraGroupProductsQuery} = gatewayApi;
 
@@ -68,7 +69,7 @@ function ProductExcerpt({product}: {product: ProductStatus}) {
           disabled={enableLoading || disableLoading} 
           className="product-excerpt-enable-disable-button">{isProductEnabled ? 'Disable' : 'Enable'}
         </button>
-        <button className="product-excerpt-edit-button">Edit Product</button>
+        <Link className="edit-product-link" href={`/dashboard/editProduct?cameraGroup=${cameraGroup}&label=${product.label}`}>Edit Product</Link>
       </section>
     </article>
   );
@@ -76,8 +77,8 @@ function ProductExcerpt({product}: {product: ProductStatus}) {
 
 export default function Products({products}: {products: ProductStatus[]}) {
   return (
-    <section className="products">
+    <>
       {products.map(product => <ProductExcerpt key={product.label} product={product} />)}
-    </section>
+    </>
   );
 }
