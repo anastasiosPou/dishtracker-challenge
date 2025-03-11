@@ -95,7 +95,7 @@ export function createGatewayApi() {
   const gatewayApi = createApi({
     reducerPath: 'gateway',
     baseQuery: proxiedBaseQuery,
-    tagTypes: ["WhoAmI", "CameraGroupProducts", 'Product', 'Category'],
+    tagTypes: ["WhoAmI", "CameraGroupProducts", 'Product', 'Category', 'Products'],
     endpoints: (builder) => ({
       getWhoAmI: builder.query<{ user_id: number, email: string, team_id: number }, void>({
         query: () => "/api/v1/whoami",
@@ -128,8 +128,10 @@ export function createGatewayApi() {
       }),
       getAllProducts: builder.query<ProductSync<ProductStatus[]>, void>({
         query: () => 'api/v1/product?offset=0&limit=100',
-        //TODO I need to create specific tags for each product
-        providesTags: ['CameraGroupProducts']
+        providesTags: (result, error, arg) => [
+          'Products',
+          ...result.data.map(product => ({type: 'Product', id: product.label}) as const)
+        ]
       }),
       getCameraGroupProducts: builder.query<ProductSync<ProductStatus[]>, { cameraGroup: string; enabled?: boolean | null }>({
         query: ({ cameraGroup, enabled }) => {
@@ -140,8 +142,10 @@ export function createGatewayApi() {
           }
           return `/api/v1/camera-group/${cameraGroup}/product?limit=10000${params.toString() ? "?" + params.toString() : ""}`;
         },
-        providesTags: (result, error, { cameraGroup }) =>
-          result ? [{ type: "CameraGroupProducts", id: cameraGroup }] : [],
+        providesTags: (result, error, { cameraGroup }) => [
+            'CameraGroupProducts',
+            ...result.data.map(product => ({type: 'Product', id: product.label}) as const)
+        ]
       }),
       getEnabledCameraGroupProducts: builder.query<ProductSync<ProductStatus[]>, { cameraGroup: string }>({
         query: ({ cameraGroup }) => `/api/v1/camera-group/${cameraGroup}/product?enabled=true`,
@@ -154,7 +158,12 @@ export function createGatewayApi() {
           result ? [{ type: "CameraGroupProducts", id: `${cameraGroup}-disabled` }] : [],
       }),
       getProduct: builder.query<ProductStatus, {label: string}>({
-        query: ({label}) => `api/v1/product/${label}`
+        query: ({label}) => `api/v1/product/${label}`,
+        providesTags: (result, error, {label}) => [{type: 'Product', id: label}]
+      }),
+      getCameraGroupProduct: builder.query<ProductStatus, {cameraGroup: string, label: string}>({
+        query: ({cameraGroup, label}) => `/api/v1/camera-group/${cameraGroup}/product/${label}`,
+        providesTags: (result, error, arg) => [{type: 'Product', id: arg.label}]
       }),
       createCameraGroup: builder.mutation<undefined, string>({
         query: (cameraGroup) => ({
@@ -186,7 +195,11 @@ export function createGatewayApi() {
           method: 'PUT',
           body: {enabled: true}
         }),
-        invalidatesTags: (result, error, arg) => [{ type: 'CameraGroupProducts', id: `${arg.cameraGroup}-enabled` }]
+        invalidatesTags: (result, error, arg) => [
+          {type: 'Product', id: arg.label},
+          'Products',
+          'CameraGroupProducts'
+        ]
       }),
       disableProduct: builder.mutation<void, DisabledProduct>({
         query: ({cameraGroup, label}) => ({
@@ -194,7 +207,11 @@ export function createGatewayApi() {
           method: 'DELETE'
         }),
         //TODO: I need to invalidate only the specific product, not all the products.
-        invalidatesTags: (result, error, arg) => [{type: 'CameraGroupProducts', id: `${arg.cameraGroup}-enabled`}]
+        invalidatesTags: (result, error, arg) => [
+          {type: 'Product', id: arg.label},
+          'Products',
+          'CameraGroupProducts'
+        ]
       }),
       removeProduct: builder.mutation<void, string>({
         query: (productLabel) => ({
@@ -244,7 +261,6 @@ export function createGatewayApi() {
     }
   });
 
-  // const selectCameraGroup = (state: RootState) => state.gatewayApiConfig.cameraGroup;
   const selectCameraGroup = createSelector(
     (state) => state.gatewayApiConfig,
     ({cameraGroup}) => cameraGroup
