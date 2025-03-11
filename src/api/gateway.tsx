@@ -153,6 +153,9 @@ export function createGatewayApi() {
         providesTags: (result, error, { cameraGroup }) =>
           result ? [{ type: "CameraGroupProducts", id: `${cameraGroup}-disabled` }] : [],
       }),
+      getProduct: builder.query<ProductStatus, {label: string}>({
+        query: ({label}) => `api/v1/product/${label}`
+      }),
       createCameraGroup: builder.mutation<undefined, string>({
         query: (cameraGroup) => ({
           url: '/api/v1/camera-group',
@@ -241,7 +244,11 @@ export function createGatewayApi() {
     }
   });
 
-  const selectCameraGroup = (state) => state.gatewayApiConfig.cameraGroup;
+  // const selectCameraGroup = (state: RootState) => state.gatewayApiConfig.cameraGroup;
+  const selectCameraGroup = createSelector(
+    (state) => state.gatewayApiConfig,
+    ({cameraGroup}) => cameraGroup
+  );
 
   return {
     gatewayApi,
