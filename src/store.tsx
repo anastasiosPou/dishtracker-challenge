@@ -4,7 +4,7 @@ import { setupListeners } from '@reduxjs/toolkit/dist/query/react';
 import { createGatewayApi } from "./api/gateway";
 
 
-const {gatewayApi, gatewayActions, gatewayReducer, gatewayMiddleware} = createGatewayApi();
+const {gatewayApi, gatewayActions, gatewayReducer, gatewayMiddleware, selectCameraGroup} = createGatewayApi();
 
 export const store = configureStore({
   reducer: gatewayReducer,
@@ -14,7 +14,7 @@ export const store = configureStore({
 
 setupListeners(store.dispatch)
 
-export { gatewayApi, gatewayActions };
+export { gatewayApi, gatewayActions, selectCameraGroup };
 export const gatewayEndpoints = gatewayApi.endpoints;
 
 export type RootState = ReturnType<typeof store.getState>;

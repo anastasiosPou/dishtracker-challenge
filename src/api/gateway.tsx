@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createSelector } from "@reduxjs/toolkit";
 import { BaseQueryFn, createApi, FetchArgs, fetchBaseQuery, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
 
 //Variables and constants
@@ -219,7 +219,8 @@ export function createGatewayApi() {
       bearerToken: "",
       locationId: "",
       configName: null,
-      baseUrl: "https://recognition.dishtracker.io"
+      baseUrl: "https://recognition.dishtracker.io",
+      cameraGroup: ""
     },
     reducers: {
       setGatewayToken: (state, action: { payload: string }) => {
@@ -234,12 +235,18 @@ export function createGatewayApi() {
       setGatewayBaseUrl: (state, action: { payload: string }) => {
         state.baseUrl = action.payload;
       },
+      setCameraGroup: (state, action: {payload: string}) => {
+        state.cameraGroup = action.payload;
+      }
     }
   });
+
+  const selectCameraGroup = (state) => state.gatewayApiConfig.cameraGroup;
 
   return {
     gatewayApi,
     gatewayActions: gatewaySlice.actions,
+    selectCameraGroup,
     gatewayReducer: {
       [gatewayApi.reducerPath]: gatewayApi.reducer,
       [gatewaySlice.name]: gatewaySlice.reducer,

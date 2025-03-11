@@ -8,7 +8,7 @@
 //Imports
 import { useRouter } from "next/navigation";
 import React, {useState} from "react";
-import { gatewayApi } from "../../store";
+import { gatewayApi, gatewayActions, useAppDispatch } from "../../store";
 
 /*
  The LoginFormFields and LoginFormElements are used to
@@ -42,7 +42,7 @@ function validateCameraGroupInput(cameraGroup: string): boolean {
 export default function Login() {
   const [loginErrors, setLoginErrors] = useState({});
   const router = useRouter();
-
+  const dispatch = useAppDispatch();
   const {useCreateCameraGroupMutation} = gatewayApi;
   const [createCameraGroup, {isLoading}] = useCreateCameraGroupMutation();
   
@@ -93,7 +93,11 @@ export default function Login() {
 
     try {
       await createCameraGroup(cameraGroup).unwrap();
-
+      /*
+        We're dispatching the setCameraGroup to have access to the 
+        cameraGroup throughout our app.
+      */
+      dispatch(gatewayActions.setCameraGroup(cameraGroup));
       //We should show the dashboard if the login was successfull
       router.push('/dashboard');
     }
