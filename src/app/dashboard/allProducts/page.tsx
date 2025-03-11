@@ -11,14 +11,11 @@ const {useGetAllProductsQuery} = gatewayApi;
 
 export default function AllProducts() {
   const {isLoading: skip} = useGateway();
-  const {data: allProducts, isLoading, isFetching, isSuccess, isError, error} = useGetAllProductsQuery(undefined, {skip});
+  const {data: allProducts, isLoading, isSuccess, isError, error} = useGetAllProductsQuery(undefined, {skip});
   let content: React.ReactNode = null;
 
   if (isLoading) {
     content = <p>Loading products...</p>
-  }
-  else if (isFetching) {
-    content = <p>Updating products...</p>
   }
   else if (isError) {
     const errorMessage = error.message

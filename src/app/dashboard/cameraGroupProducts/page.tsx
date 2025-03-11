@@ -16,15 +16,12 @@ export default function CameraGroupProducts() {
   const searchParams = useSearchParams()
   const cameraGroup = searchParams.get('cameraGroup');
 
-  const {data: cameraGroupProducts, isLoading, isFetching, isSuccess, isError, error} = useGetCameraGroupProductsQuery({cameraGroup}, {skip});
+  const {data: cameraGroupProducts, isLoading, isSuccess, isError, error} = useGetCameraGroupProductsQuery({cameraGroup}, {skip});
 
   let content: React.ReactNode = null;
 
   if (isLoading) {
     content = <p>Loading products...</p>
-  }
-  else if (isFetching) {
-    content = <p>Updating products...</p>
   }
   else if (isError) {
     const errorMessage = error.message
