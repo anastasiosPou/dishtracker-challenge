@@ -4,7 +4,7 @@
   we've enabled for the cameraGroup
 */
 
-import { gatewayApi, selectCameraGroup, useAppSelector } from "../../../store";
+import { gatewayApi } from "../../../store";
 import { useGateway } from "../../../GatewayProvider";
 import Products from "../../../components/products/Products";
 import { useSearchParams } from "next/navigation";
