@@ -268,15 +268,25 @@ export function createGatewayApi() {
     }
   });
 
-  const selectCameraGroup = createSelector(
-    (state) => state.gatewayApiConfig,
-    ({cameraGroup}) => cameraGroup
-  );
+  /*
+   For some reason, the redux store state gets reset when a refresh the page.
+   I haven't found the nature and source of the problem. It may have to do with Next.js
+   The selector below works but when I refresh the page it returns the initial state.
+  */
+  // const selectCameraGroup = createSelector(
+  //   (state) => {
+  //     console.log('state:', state);
+  //     return state.gatewayApiConfig
+  //   },
+  //   ({cameraGroup}) => {
+  //     console.log('cameraGroup: ', cameraGroup);
+  //     return cameraGroup;
+  //   }
+  // );
 
   return {
     gatewayApi,
     gatewayActions: gatewaySlice.actions,
-    selectCameraGroup,
     gatewayReducer: {
       [gatewayApi.reducerPath]: gatewayApi.reducer,
       [gatewaySlice.name]: gatewaySlice.reducer,
