@@ -9,7 +9,6 @@ import { gatewayApi } from "../../../store";
 import { useGateway } from "../../../GatewayProvider";
 import Products from "../../../components/products/Products";
 
-
 //Constants
 const {useGetAllProductsQuery} = gatewayApi;
 
