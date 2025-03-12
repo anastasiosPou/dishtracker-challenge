@@ -165,6 +165,10 @@ export function createGatewayApi() {
         query: ({cameraGroup, label}) => `/api/v1/camera-group/${cameraGroup}/product/${label}`,
         providesTags: (result, error, arg) => [{type: 'Product', id: arg.label}]
       }),
+      getCategories: builder.query<ProductSync<Category[]>, void>({
+        query: () => 'api/v1/category',
+        providesTags: ['Category']
+      }),
       createCameraGroup: builder.mutation<undefined, string>({
         query: (cameraGroup) => ({
           url: '/api/v1/camera-group',

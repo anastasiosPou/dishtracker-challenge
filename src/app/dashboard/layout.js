@@ -17,7 +17,7 @@ export default function DashboardLayout({children}) {
         {children}
       </main>
       <footer className="toolbar">
-        <button className="">Create product</button>
+        <Link href="/dashboard/createProduct">Create Product</Link>
         <button className="">Create category</button>
       </footer>
     </div>
