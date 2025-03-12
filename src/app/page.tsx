@@ -1,16 +1,15 @@
 'use client';
 
+import Link from "next/link";
 import { useGateway } from "../GatewayProvider";
-import { useRouter } from "next/navigation";
 
 export default function Page() {
   const { isLoading } = useGateway();
-  const router = useRouter();
 
-  if (isLoading) {
-    return <h1>Welcome to Dishtracker</h1>
-  }
-  else {
-    router.push('/login');
-  }
+  return (
+    <>
+      <h1>Welcome to Dishtracker</h1>
+      {!isLoading && <Link href="/login">Log in</Link>}
+    </>
+  );
 }
