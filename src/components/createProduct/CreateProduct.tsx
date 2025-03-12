@@ -97,7 +97,6 @@ export default function CreateProduct() {
         plu: productPLU, 
         category: productCategory
       }
-      console.log('1')
       await createProduct(newProduct).unwrap();
       //TODO create a better UI experience we have a successfull product creation.
       alert('Product created!');
@@ -129,6 +128,7 @@ export default function CreateProduct() {
           {productCategories}
         </select>
         <button type="submit">Create product</button>
+        <Link className="cancel-link-button" href={`/dashboard/allProducts?cameraGroup=${cameraGroup}`}>Cancel</Link>
         <span className="inputError">{inputErrors['CreateProductError']}</span>
       </form>
     </>

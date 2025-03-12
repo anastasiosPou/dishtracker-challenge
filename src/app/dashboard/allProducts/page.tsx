@@ -3,16 +3,19 @@
   The AllProducts component renders all the products(regardless of cameraGroup)
 */
 
+
+//Imports
 import { gatewayApi } from "../../../store";
 import { useGateway } from "../../../GatewayProvider";
 import Products from "../../../components/products/Products";
-import { useCameraGroup } from "../../../customHooks/useCameraGroup";
+
+
+//Constants
 const {useGetAllProductsQuery} = gatewayApi;
 
 export default function AllProducts() {
   const {isLoading: skip} = useGateway();
   const {data: allProducts, isLoading, isSuccess, isError, error} = useGetAllProductsQuery(undefined, {skip});
-  const cameraGroup = useCameraGroup()
   let content: React.ReactNode = null;
 
   if (isLoading) {
