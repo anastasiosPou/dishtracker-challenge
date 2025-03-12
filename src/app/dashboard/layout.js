@@ -1,12 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import {useCameraGroup} from '../../customHooks/useCameraGroup';
 
 export default function DashboardLayout({children}) {
-  const searchParams = useSearchParams();
-  const cameraGroup = searchParams.get('cameraGroup');
-
+  const cameraGroup = useCameraGroup();
   return (
     <div className="dashboard">
       <header>
@@ -17,7 +15,7 @@ export default function DashboardLayout({children}) {
         {children}
       </main>
       <footer className="toolbar">
-        <Link href="/dashboard/createProduct">Create Product</Link>
+        <Link href={`/dashboard/createProduct?cameraGroup=${cameraGroup}`}>Create Product</Link>
         <button className="">Create category</button>
       </footer>
     </div>

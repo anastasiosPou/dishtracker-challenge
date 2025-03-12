@@ -7,14 +7,13 @@
 import { gatewayApi } from "../../../store";
 import { useGateway } from "../../../GatewayProvider";
 import Products from "../../../components/products/Products";
-import { useSearchParams } from "next/navigation";
+import { useCameraGroup } from "../../../customHooks/useCameraGroup";
 
 const {useGetCameraGroupProductsQuery} = gatewayApi;
 
 export default function CameraGroupProducts() {
   const {isLoading: skip} = useGateway();
-  const searchParams = useSearchParams()
-  const cameraGroup = searchParams.get('cameraGroup');
+  const cameraGroup = useCameraGroup()
 
   const {data: cameraGroupProducts, isLoading, isSuccess, isError, error} = useGetCameraGroupProductsQuery({cameraGroup}, {skip});
 
@@ -24,7 +23,7 @@ export default function CameraGroupProducts() {
     content = <p>Loading products...</p>
   }
   else if (isError) {
-    const errorMessage = error.message
+    const errorMessage = error.message;
     content = <p>An error occured while fetching the products: {errorMessage}</p>
   }
   else if (isSuccess) {

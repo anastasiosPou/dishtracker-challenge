@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { NewProduct } from "../../api/gateway";
 import { useRouter } from "next/navigation";
-
+import { useCameraGroup } from "../../customHooks/useCameraGroup";
 //Variables, constants
 const {useGetCategoriesQuery, useCreateProductMutation} = gatewayApi;
 
@@ -41,7 +41,8 @@ export default function CreateProduct() {
   const [category, setCategory ] = useState("");
   const [productName, setProductName] = useState("");
   const [createProduct, {isLoading: isLoadingCreateProduct}] = useCreateProductMutation();
-  const router = useRouter()
+  const router = useRouter();
+  const cameraGroup = useCameraGroup();
   const {
     data: categories, 
     isLoading: categoriesLoading, 
@@ -100,7 +101,7 @@ export default function CreateProduct() {
       await createProduct(newProduct).unwrap();
       //TODO create a better UI experience we have a successfull product creation.
       alert('Product created!');
-      router.push(`/dashboard/allProducts`)
+      router.push(`/dashboard/allProducts?cameraGroup=${cameraGroup}`)
     }
     catch (err) {
       alert('Error while creating the product: ' + err);

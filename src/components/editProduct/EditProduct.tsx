@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from "react";
-import { ProductStatus } from "../../api/gateway";
 import { gatewayApi } from "../../store";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useCameraGroup } from "../../customHooks/useCameraGroup";
 const {useUpdateProductMutation} = gatewayApi
 
 /*
@@ -29,12 +29,13 @@ function validateInput(input: string) {
 /*
   EditProduct takes a product and we can edit the PLU and the name of the product
 */
-export default function EditProduct({product, cameraGroup}) {
+export default function EditProduct({product}) {
   const [updateProduct, {isLoading}] = useUpdateProductMutation();
   const [inputErrors, setInputErrors] = useState({});
   const router = useRouter();
   const productNameError = {type: 'NameError', message: "Product name isn't valid"}
   const productPLUError = {type: 'PLUError', message: "PLU isn't valid"}
+  const cameraGroup = useCameraGroup()
 
   const handleSubmit = async (e: React.FormEvent<EditProductFormElements>) => {
     e.preventDefault();
@@ -62,7 +63,7 @@ export default function EditProduct({product, cameraGroup}) {
 
     try {
       await updateProduct({label: product.label, name: productName, plu: productPLU, category: product.category}).unwrap();
-      alert('Product Created');
+      alert('Product Updated');
       setTimeout(() => router.push(`/dashboard/allProducts?cameraGroup=${cameraGroup}`), 2000);
     }
     catch (err) {

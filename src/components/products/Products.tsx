@@ -10,8 +10,8 @@ import { useRef, useState } from "react";
 
 import { ProductStatus } from "../../api/gateway";
 import { gatewayApi } from "../../store";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useCameraGroup } from "../../customHooks/useCameraGroup";
 
 const {useEnableProductMutation, useDisableProductMutation, useGetCameraGroupProductsQuery} = gatewayApi;
 
@@ -19,15 +19,8 @@ function ProductExcerpt({product}: {product: ProductStatus}) {
   //These mutations are used when we enable/disable a product
   const [enableProduct, {isLoading: enableLoading}] = useEnableProductMutation();
   const [disableProduct, {isLoading: disableLoading}] = useDisableProductMutation();
+  const cameraGroup = useCameraGroup();
   let isProductEnabled = false;
-
-  /*
-    We need the cameraGroup in order to make the reuests.
-    For some reason, when I use a selector to retreive the cameraGroup from the store,
-    on reload is empty. I need to investigate.
-  */
-  const searchParams = useSearchParams();
-  const cameraGroup = searchParams.get('cameraGroup');
 
   /*
     We're taking the product(if any) that are available in the cameraGroup.
@@ -35,9 +28,9 @@ function ProductExcerpt({product}: {product: ProductStatus}) {
   const {data: cameraGroupProducts, isLoading: cameraGroupProductsLoading} = useGetCameraGroupProductsQuery({cameraGroup});
 
   if (!cameraGroupProductsLoading) {
-    /* TODO
-      I need to normalize the data in the cache in order to do lookups like chache[label].
-      find could be expensive if we have lots of products.
+    /* //TODO
+      I need to normalize the data in the cache in order to do lookups like cache[label].
+      The find() function could be expensive if we have lots of products.
 
       If a product from all the products is in the cameraGroupProducts it means that it's enabled.
      */
