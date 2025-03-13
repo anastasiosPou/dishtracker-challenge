@@ -10,7 +10,10 @@ $button-width: 100px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 400px));
   row-gap: 3rem;
+  column-gap: 4rem;
+  //TODO center the produts in the container.
   justify-items: center;
+  justify-content: center;
 }
 
 .productExcerpt {
