@@ -12,6 +12,7 @@ import { ProductStatus } from "../../api/gateway";
 import { gatewayApi } from "../../store";
 import Link from "next/link";
 import { useCameraGroup } from "../../customHooks/useCameraGroup";
+import productStyles from './product.module.scss';
 
 const {useEnableProductMutation, useDisableProductMutation, useGetCameraGroupProductsQuery} = gatewayApi;
 
@@ -52,17 +53,19 @@ function ProductExcerpt({product}: {product: ProductStatus}) {
   }
 
   return (
-    <article className="product-excerpt">
-      <h3><span className="category-pill">{product.category}</span>.{product.name}</h3>
-      <p className="product-excerpt-name">{product.name}</p>
-      <p className="product-excerpt-plu">{product.plu}</p>
-      <section className="product-excerpt-actions">
+    <article className={productStyles.productExcerpt}>
+      <section className={productStyles.productInfo}>
+        <h3><span className="category-pill">{product.category}</span>.{product.name}</h3>
+        <p className="product-excerpt-name">Name: {product.name}</p>
+        <p className="product-excerpt-plu">PLU: {product.plu}</p>
+      </section>
+      <section className={productStyles.productExcerptActions}>
         <button 
           onClick={handleEnableDisableClick} 
           disabled={enableLoading || disableLoading} 
-          className="product-excerpt-enable-disable-button">{isProductEnabled ? 'Disable' : 'Enable'}
+          className={productStyles.enableDisableButton}>{isProductEnabled ? 'Disable' : 'Enable'}
         </button>
-        <Link className="edit-product-link" href={`/dashboard/editProduct?cameraGroup=${cameraGroup}&label=${product.label}`}>Edit Product</Link>
+        <Link className={productStyles.editLink} href={`/dashboard/editProduct?cameraGroup=${cameraGroup}&label=${product.label}`}>Edit<span>&#8594;</span></Link>
       </section>
     </article>
   );
@@ -70,8 +73,8 @@ function ProductExcerpt({product}: {product: ProductStatus}) {
 
 export default function Products({products}: {products: ProductStatus[]}) {
   return (
-    <>
+    <main className={productStyles.productsList}>
       {products.map(product => <ProductExcerpt key={product.label} product={product} />)}
-    </>
+    </main>
   );
 }

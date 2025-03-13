@@ -11,9 +11,7 @@ export default function DashboardLayout({children}) {
         <section className="logo"></section>
         <Link href={`/dashboard/cameraGroupProducts?cameraGroup=${cameraGroup}`}>CameraGroup: {cameraGroup}</Link>
       </header>
-      <main className="product-list">
-        {children}
-      </main>
+      {children}
       <footer className="toolbar">
         <Link className="create-product-link" href={`/dashboard/createProduct?cameraGroup=${cameraGroup}`}>Create Product</Link>
         <Link className="create-category-link" href={`/dashboard/createCategory?cameraGroup=${cameraGroup}`}>Create Category</Link>

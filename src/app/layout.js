@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 
 import {store} from '../store';
 import { GatewayProvider } from '../GatewayProvider';
+import './global.scss';
 
 export default function RootLayout({ children }) {
   return (

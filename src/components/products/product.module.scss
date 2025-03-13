@@ -1,0 +1,112 @@
+@font-face {
+  font-family: 'Aeonik Regular';
+  src: url('../../assets/fonts/Aeonik-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Aeonik Medium';
+  src: url('../../assets/fonts/Aeonik-Medium.ttf') format('truetype');
+}
+
+//Variables
+$category-pill-color: #9ACFAE;
+$enableDisable-button-color: #F091B0;
+$pill-radius: 25px;
+$pill-padding: 3px 6px;
+$button-text-color: #FFFFFF;
+$button-width: 100px;
+
+.productsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 400px));
+  row-gap: 3rem;
+  justify-items: center;
+}
+
+.productExcerpt {
+  display: flex;
+  width: 360px;
+  height: 180px;
+  padding: 14px;
+  flex-direction: column;
+  font: {
+    family: 'Aeonik Medium';
+  }
+
+  background: {
+    image: url('./prductBackground.png');
+    origin: border-box;
+    repeat: no-repeat;
+    size: 100% 100%;
+  }
+
+  h3 {
+
+    font: {
+      family: "Aeonik Regular";
+    }
+    span {
+      background-color: $category-pill-color;
+      color: white;
+      border-radius: $pill-radius;
+      padding: 3px 5px;
+    }
+  }
+
+}
+
+.productInfo {
+  display: flex;
+  flex-direction: column;
+  row-gap: 8px;
+  h3, p {
+    margin: 2px;
+  }
+  flex: 3;
+}
+
+.productExcerptActions {
+  display: flex;
+  font-size: 1.2rem;
+  flex: 1;
+  justify-content: flex-start;
+  column-gap: 20px;
+}
+
+.enableDisableButton {
+  font: {
+    family: 'Aeonik Medium';
+  }
+  border: none;
+  background-color: $enableDisable-button-color;
+  color: $button-text-color;
+  padding: $pill-padding;
+  border-radius: $pill-radius;
+  cursor: pointer;
+  width: $button-width
+}
+
+.editLink {
+  text-decoration: none;
+  color: $button-text-color;
+  background-color: #7362A8;
+  padding: $pill-padding;
+  border-radius: $pill-radius;
+  width: $button-width;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+
+  span {
+    color: black;
+    background-color: white;
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    text-align:center;
+    vertical-align: middle;
+    line-height: 25px;
+    font-size: 1.8rem;
+    border-radius: 50px;
+  }
+}
