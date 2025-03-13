@@ -1,4 +1,23 @@
 /*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */
+@font-face {
+  font-family: 'Aeonik Regular';
+  src: url('../assets/fonts/Aeonik-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Aeonik Medium';
+  src: url('../assets/fonts/Aeonik-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Tomorrow Regular';
+  src: url('../assets/fonts/Tomorrow-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Tomorrow Medium';
+  src: url('../assets/fonts/Tomorrow-Medium.ttf') format('truetype');
+}
 
 /* Document
    ========================================================================== */
