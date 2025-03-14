@@ -43,8 +43,61 @@
   justify-content: space-evenly;
   margin-top: auto;
   align-items: center;
+
+  span {
+    display: none;
+  }
 }
 
 .createProductLink {
   cursor: pointer;
+}
+
+//Media queries
+
+//Desktop
+@media screen and (min-width: 1024px) {
+  .dashboard {
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: repeat(12, 150px);
+    gap: 0;
+    header {
+      grid-area: 1/2/2/-1;
+      justify-self: end;
+      padding-right: 25px;
+    }
+
+    main {
+      grid-area: 2/2/-1/-1;
+    }
+  }
+
+  .toolbar {
+    grid-area: 1/1/-1/2;
+    top: 0;
+    height: 100vh;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    row-gap: 1.5rem;
+    padding-top: 150px;
+    padding-left: 10px;
+    
+    a {
+      text-decoration: none;
+      color: white;
+      display: flex;
+      align-items: center;
+      font: {
+        family: 'Aeonik Regular';
+        size: 1.2rem;
+      }
+
+      span {
+        display: initial;
+      }
+    }
+
+  }
+
 }
